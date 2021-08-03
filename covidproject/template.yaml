@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  covidproject
+
+  Sample SAM Template for covidproject
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+
+  CovidDataUpdateSuccess:
+    Type: AWS::SNS::Topic
+    Properties: 
+      TopicName: CovidDataUpdateSuccess
+
+  CovidDataUpdateFailure:
+    Type: AWS::SNS::Topic
+    Properties: 
+      TopicName: CovidDataUpdateFailure
+      
+  dataDownloadFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: dataDownload/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Events:
+        dataDownload:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(1 day)'
+            Description: daily schedule
+            Enabled: True
+      EventInvokeConfig:
+        DestinationConfig:
+          OnSuccess:
+            Type: SNS
+            TopicArn: !Ref CovidDataUpdateSuccess
+          OnFailure:
+            Type: SNS
+            TopicArn: !Ref CovidDataUpdateFailure
+
+  PostgreSQL:
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      DBName : CovidDB
+      Engine: postgres
+      AllocatedStorage: 50
+      DBInstanceClass: db.t2.micro
+      MasterUsername: chrisn
+      MasterUserPassword: covidprojectpw
+
+
